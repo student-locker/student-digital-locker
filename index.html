@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Student Digital Locker</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body{font-family:Arial;background:#eef2ff;padding:20px}
+.card{background:white;padding:20px;border-radius:12px;max-width:700px;margin:auto}
+input,select,button{width:100%;padding:12px;margin:6px 0;border-radius:8px;border:1px solid #ccc}
+button{background:#4f46e5;color:white;border:none;font-weight:bold}
+.doc{background:#f8fafc;padding:12px;margin:8px 0;border-radius:8px}
+</style>
+</head>
+<body>
+<div class="card">
+<h2>Student Digital Locker</h2>
+<p>Store your certificates safely</p>
+<input id="n" placeholder="Document Name">
+<select id="t"><option>Certificate</option><option>ID Card</option><option>Marksheet</option><option>Other</option></select>
+<input type="file" id="f">
+<button onclick="save()">Add to Locker</button>
+<hr>
+<input id="s" placeholder="Search" onkeyup="show()">
+<div id="list"></div>
+</div>
+<script>
+let a=JSON.parse(localStorage.getItem('lock')||'[]');
+function save(){
+let name=document.getElementById('n').value;
+let type=document.getElementById('t').value;
+let file=document.getElementById('f').files[0];
+if(!name||!file){alert('Add name and file');return}
+let r=new FileReader();
+r.onload=e=>{a.push({name,type,data:e.target.result});localStorage.setItem('lock',JSON.stringify(a));show();document.getElementById('n').value=''}
+r.readAsDataURL(file);
+}
+function show(){
+let q=document.getElementById('s').value.toLowerCase();
+let l=document.getElementById('list');l.innerHTML='';
+a.filter(x=>x.name.toLowerCase().includes(q)).forEach((x,i)=>{
+l.innerHTML+=`<div class=doc><b>${x.name}</b> - ${x.type}<br><a href=${x.data} download><button>View</button></a> <button onclick="a.splice(${i},1);localStorage.setItem('lock',JSON.stringify(a));show()" style="background:red">Delete</button></div>`;
+});
+}
+show();
+</script>
+</div>
+</body>
