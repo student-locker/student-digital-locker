@@ -1,47 +1,1360 @@
-<!DOCTYPE html>
-<html>
-<head>
-<title>Student Digital Locker</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<style>
-body{font-family:Arial;background:#eef2ff;padding:20px}
-.card{background:white;padding:20px;border-radius:12px;max-width:700px;margin:auto}
-input,select,button{width:100%;padding:12px;margin:6px 0;border-radius:8px;border:1px solid #ccc}
-button{background:#4f46e5;color:white;border:none;font-weight:bold}
-.doc{background:#f8fafc;padding:12px;margin:8px 0;border-radius:8px}
-</style>
-</head>
-<body>
-<div class="card">
-<h2>Student Digital Locker</h2>
-<p>Store your certificates safely</p>
-<input id="n" placeholder="Document Name">
-<select id="t"><option>Certificate</option><option>ID Card</option><option>Marksheet</option><option>Other</option></select>
-<input type="file" id="f">
-<button onclick="save()">Add to Locker</button>
-<hr>
-<input id="s" placeholder="Search" onkeyup="show()">
-<div id="list"></div>
-</div>
 <script>
-let a=JSON.parse(localStorage.getItem('lock')||'[]');
-function save(){
-let name=document.getElementById('n').value;
-let type=document.getElementById('t').value;
-let file=document.getElementById('f').files[0];
-if(!name||!file){alert('Add name and file');return}
-let r=new FileReader();
-r.onload=e=>{a.push({name,type,data:e.target.result});localStorage.setItem('lock',JSON.stringify(a));show();document.getElementById('n').value=''}
-r.readAsDataURL(file);
+
+/* ==========================================
+   STUDENT DIGITAL LOCKER
+   JAVASCRIPT
+   ========================================== */
+
+
+const CRED_KEY = "SDL_CREDENTIALS";
+const DATA_KEY = "SDL_DATA";
+
+
+let locker = {
+
+    files: [],
+
+    profile: {
+        name: "",
+        college: "",
+        branch: "",
+        year: "",
+        phone: "",
+        address: ""
+    },
+
+    note: ""
+
+};
+
+
+let activeCategory = "All";
+
+
+/* ==========================================
+   SAVE LOCKER
+   ========================================== */
+
+function saveLocker() {
+
+    localStorage.setItem(
+        DATA_KEY,
+        JSON.stringify(locker)
+    );
+
 }
-function show(){
-let q=document.getElementById('s').value.toLowerCase();
-let l=document.getElementById('list');l.innerHTML='';
-a.filter(x=>x.name.toLowerCase().includes(q)).forEach((x,i)=>{
-l.innerHTML+=`<div class=doc><b>${x.name}</b> - ${x.type}<br><a href=${x.data} download><button>View</button></a> <button onclick="a.splice(${i},1);localStorage.setItem('lock',JSON.stringify(a));show()" style="background:red">Delete</button></div>`;
-});
+
+
+/* ==========================================
+   LOAD LOCKER
+   ========================================== */
+
+function readLocker() {
+
+    try {
+
+        const saved =
+            localStorage.getItem(DATA_KEY);
+
+        if (saved) {
+
+            const data =
+                JSON.parse(saved);
+
+            locker.files =
+                data.files || [];
+
+            locker.profile =
+                data.profile || locker.profile;
+
+            locker.note =
+                data.note || "";
+
+        }
+
+    } catch (error) {
+
+        console.log(error);
+
+    }
+
 }
-show();
+
+
+/* ==========================================
+   LOGIN
+   ========================================== */
+
+function doLogin() {
+
+    const id =
+        document
+        .getElementById("studentId")
+        .value
+        .trim();
+
+
+    const password =
+        document
+        .getElementById("studentPassword")
+        .value;
+
+
+    const error =
+        document
+        .getElementById("loginError");
+
+
+    error.textContent = "";
+
+
+    /* CHECK EMPTY FIELDS */
+
+    if (id === "" || password === "") {
+
+        error.textContent =
+            "Please enter Student ID and password.";
+
+        return;
+
+    }
+
+
+    /*
+       CHECK WHETHER CREDENTIALS
+       ALREADY EXIST
+    */
+
+    let saved =
+        localStorage.getItem(CRED_KEY);
+
+
+    /* =====================================
+       FIRST LOGIN
+       ===================================== */
+
+    if (saved === null) {
+
+        /*
+           The student's entered ID
+           and password become their
+           locker credentials.
+        */
+
+        localStorage.setItem(
+
+            CRED_KEY,
+
+            JSON.stringify({
+
+                id: id,
+
+                password: password
+
+            })
+
+        );
+
+
+        /*
+           Create empty locker
+        */
+
+        locker = {
+
+            files: [],
+
+            profile: {
+
+                name: "",
+                college: "",
+                branch: "",
+                year: "",
+                phone: "",
+                address: ""
+
+            },
+
+            note: ""
+
+        };
+
+
+        saveLocker();
+
+    }
+
+
+    /* =====================================
+       EXISTING LOGIN
+       ===================================== */
+
+    else {
+
+        let credentials;
+
+
+        try {
+
+            credentials =
+                JSON.parse(saved);
+
+        } catch (e) {
+
+            localStorage.removeItem(CRED_KEY);
+
+            error.textContent =
+                "Login data was damaged. Please try again.";
+
+            return;
+
+        }
+
+
+        /*
+           CHECK ID AND PASSWORD
+        */
+
+        if (
+
+            credentials.id !== id ||
+
+            credentials.password !== password
+
+        ) {
+
+            error.textContent =
+                "❌ Incorrect Student ID or Password.";
+
+            return;
+
+        }
+
+
+        /*
+           Load existing locker
+        */
+
+        readLocker();
+
+    }
+
+
+    /*
+       OPEN DASHBOARD
+    */
+
+    openDashboard(id);
+
+}
+
+
+/* ==========================================
+   OPEN DASHBOARD
+   ========================================== */
+
+function openDashboard(id) {
+
+
+    document
+        .getElementById("loginPage")
+        .classList
+        .add("hidden");
+
+
+    document
+        .getElementById("dashboard")
+        .classList
+        .remove("hidden");
+
+
+    document
+        .getElementById("logoutBtn")
+        .classList
+        .remove("hidden");
+
+
+    document
+        .getElementById("welcome")
+        .textContent =
+
+        "Welcome, " +
+
+        (
+            locker.profile.name ||
+            id
+        ) +
+
+        " 👋";
+
+
+    document
+        .getElementById("notes")
+        .value =
+        locker.note;
+
+
+    renderFiles();
+
+    updateStats();
+
+
+    showToast(
+        "Login successful 🔓"
+    );
+
+}
+
+
+/* ==========================================
+   LOGOUT
+   ========================================== */
+
+function logout() {
+
+
+    document
+        .getElementById("dashboard")
+        .classList
+        .add("hidden");
+
+
+    document
+        .getElementById("logoutBtn")
+        .classList
+        .add("hidden");
+
+
+    document
+        .getElementById("loginPage")
+        .classList
+        .remove("hidden");
+
+
+    document
+        .getElementById("studentPassword")
+        .value = "";
+
+
+    document
+        .getElementById("loginError")
+        .textContent = "";
+
+}
+
+
+/* ==========================================
+   UPLOAD DOCUMENTS
+   ========================================== */
+
+function uploadFiles(event) {
+
+
+    const selectedFiles =
+        Array.from(event.target.files);
+
+
+    selectedFiles.forEach(file => {
+
+
+        /*
+           Maximum 2 MB
+        */
+
+        if (
+            file.size >
+            2 * 1024 * 1024
+        ) {
+
+            showToast(
+                file.name +
+                " is larger than 2 MB."
+            );
+
+            return;
+
+        }
+
+
+        const reader =
+            new FileReader();
+
+
+        reader.onload =
+            function () {
+
+
+            locker.files.push({
+
+                id:
+                    Date.now() +
+                    Math.random(),
+
+                name:
+                    file.name,
+
+                size:
+                    file.size,
+
+                type:
+                    file.type,
+
+                data:
+                    reader.result,
+
+                date:
+                    new Date().toISOString(),
+
+                category:
+                    getCategory(file.name)
+
+            });
+
+
+            saveLocker();
+
+            renderFiles();
+
+            updateStats();
+
+
+            showToast(
+                "Document saved 📁"
+            );
+
+        };
+
+
+        reader.readAsDataURL(file);
+
+    });
+
+
+    /*
+       Allow selecting the
+       same file again.
+    */
+
+    event.target.value = "";
+
+}
+
+
+/* ==========================================
+   AUTOMATIC CATEGORY
+   ========================================== */
+
+function getCategory(fileName) {
+
+
+    const name =
+        fileName.toLowerCase();
+
+
+    if (
+
+        name.includes("mark") ||
+
+        name.includes("result")
+
+    ) {
+
+        return "Marksheets";
+
+    }
+
+
+    if (
+        name.includes("cert")
+    ) {
+
+        return "Certificates";
+
+    }
+
+
+    if (
+
+        name.includes("aadhar") ||
+
+        name.includes("aadhaar") ||
+
+        name.includes("id")
+
+    ) {
+
+        return "ID Proof";
+
+    }
+
+
+    if (
+
+        name.includes("resume") ||
+
+        name.includes("cv")
+
+    ) {
+
+        return "Career";
+
+    }
+
+
+    if (
+
+        name.includes("project") ||
+
+        name.includes("report")
+
+    ) {
+
+        return "Projects";
+
+    }
+
+
+    return "Other";
+
+}
+
+
+/* ==========================================
+   RENDER DOCUMENTS
+   ========================================== */
+
+function renderFiles() {
+
+
+    const search =
+        document
+        .getElementById("searchBox")
+        .value
+        .toLowerCase();
+
+
+    const sort =
+        document
+        .getElementById("sortBox")
+        .value;
+
+
+    let list =
+        locker.files.filter(file => {
+
+
+            const matchesSearch =
+                file.name
+                .toLowerCase()
+                .includes(search);
+
+
+            const matchesCategory =
+
+                activeCategory === "All"
+
+                ||
+
+                file.category ===
+                activeCategory;
+
+
+            return (
+                matchesSearch &&
+                matchesCategory
+            );
+
+        });
+
+
+    /* SORT */
+
+    if (sort === "new") {
+
+        list.sort(
+
+            (a, b) =>
+
+            new Date(b.date) -
+            new Date(a.date)
+
+        );
+
+    }
+
+
+    else if (sort === "old") {
+
+        list.sort(
+
+            (a, b) =>
+
+            new Date(a.date) -
+            new Date(b.date)
+
+        );
+
+    }
+
+
+    else if (sort === "az") {
+
+        list.sort(
+
+            (a, b) =>
+
+            a.name.localeCompare(
+                b.name
+            )
+
+        );
+
+    }
+
+
+    /* ======================================
+       CATEGORY BUTTONS
+       ====================================== */
+
+    const categories = [
+
+        "All",
+
+        ...new Set(
+
+            locker.files.map(
+                file =>
+                file.category
+            )
+
+        )
+
+    ];
+
+
+    document
+        .getElementById("categoryBar")
+        .innerHTML =
+
+        categories
+        .map(category => `
+
+            <span
+
+                class="cat
+                ${
+                    category ===
+                    activeCategory
+                    ? "active"
+                    : ""
+                }"
+
+                onclick="
+                chooseCategory(
+                    '${safe(category)}'
+                )">
+
+                ${safe(category)}
+
+            </span>
+
+        `)
+        .join("");
+
+
+    const listBox =
+        document
+        .getElementById("fileList");
+
+
+    /* NO DOCUMENTS */
+
+    if (list.length === 0) {
+
+        listBox.innerHTML = `
+
+            <div
+                style="
+                text-align:center;
+                color:#777;
+                padding:30px">
+
+                📂
+
+                <br><br>
+
+                No documents found.
+
+            </div>
+
+        `;
+
+        return;
+
+    }
+
+
+    /* DISPLAY DOCUMENTS */
+
+    listBox.innerHTML =
+
+        list
+        .map(file => `
+
+            <div class="file">
+
+                <div>
+
+                    <b>
+                        ${safe(file.name)}
+                    </b>
+
+                    <div
+                        style="
+                        font-size:12px;
+                        color:#777">
+
+                        ${safe(file.category)}
+
+                        •
+
+                        ${formatSize(file.size)}
+
+                    </div>
+
+                </div>
+
+
+                <div class="actions">
+
+                    <button
+                        class="small"
+                        onclick="
+                        viewFile('${file.id}')">
+
+                        View
+
+                    </button>
+
+
+                    <button
+                        class="small"
+                        onclick="
+                        downloadFile('${file.id}')">
+
+                        Download
+
+                    </button>
+
+
+                    <button
+                        class="small remove"
+                        onclick="
+                        deleteFile('${file.id}')">
+
+                        Remove
+
+                    </button>
+
+                </div>
+
+            </div>
+
+        `)
+        .join("");
+
+}
+
+
+/* ==========================================
+   CATEGORY FILTER
+   ========================================== */
+
+function chooseCategory(category) {
+
+    activeCategory =
+        category;
+
+    renderFiles();
+
+}
+
+
+/* ==========================================
+   FIND DOCUMENT
+   ========================================== */
+
+function findFile(id) {
+
+    return locker.files.find(
+
+        file =>
+
+        String(file.id) ===
+        String(id)
+
+    );
+
+}
+
+
+/* ==========================================
+   VIEW DOCUMENT
+   ========================================== */
+
+function viewFile(id) {
+
+
+    const file =
+        findFile(id);
+
+
+    if (!file) {
+
+        return;
+
+    }
+
+
+    document
+        .getElementById("previewName")
+        .textContent =
+        file.name;
+
+
+    const area =
+        document
+        .getElementById("previewArea");
+
+
+    /* IMAGE */
+
+    if (
+        file.type.startsWith("image/")
+    ) {
+
+        area.innerHTML = `
+
+            <img
+
+                src="${file.data}"
+
+                style="
+                max-width:100%;
+                max-height:500px;
+                display:block;
+                margin:auto">
+
+        `;
+
+    }
+
+
+    /* PDF */
+
+    else if (
+        file.type ===
+        "application/pdf"
+    ) {
+
+        area.innerHTML = `
+
+            <iframe
+
+                src="${file.data}"
+
+                style="
+                width:100%;
+                height:500px;
+                border:0">
+
+            </iframe>
+
+        `;
+
+    }
+
+
+    /* OTHER FILES */
+
+    else {
+
+        area.innerHTML = `
+
+            <div
+                style="
+                text-align:center;
+                padding:40px">
+
+                📄
+
+                <br><br>
+
+                Preview is not available
+                for this file type.
+
+                <br><br>
+
+                <button
+                    onclick="
+                    downloadFile('${file.id}')">
+
+                    ⬇ Download
+
+                </button>
+
+            </div>
+
+        `;
+
+    }
+
+
+    document
+        .getElementById("previewModal")
+        .classList
+        .remove("hidden");
+
+}
+
+
+/* ==========================================
+   CLOSE PREVIEW
+   ========================================== */
+
+function closePreview() {
+
+    document
+        .getElementById("previewModal")
+        .classList
+        .add("hidden");
+
+}
+
+
+/* ==========================================
+   DOWNLOAD DOCUMENT
+   ========================================== */
+
+function downloadFile(id) {
+
+
+    const file =
+        findFile(id);
+
+
+    if (!file) {
+
+        return;
+
+    }
+
+
+    const link =
+        document.createElement("a");
+
+
+    link.href =
+        file.data;
+
+
+    link.download =
+        file.name;
+
+
+    document
+        .body
+        .appendChild(link);
+
+
+    link.click();
+
+
+    link.remove();
+
+}
+
+
+/* ==========================================
+   DELETE DOCUMENT
+   ========================================== */
+
+function deleteFile(id) {
+
+
+    const confirmDelete =
+        confirm(
+            "Remove this document from your locker?"
+        );
+
+
+    if (!confirmDelete) {
+
+        return;
+
+    }
+
+
+    locker.files =
+        locker.files.filter(
+
+            file =>
+
+            String(file.id) !==
+            String(id)
+
+        );
+
+
+    saveLocker();
+
+    renderFiles();
+
+    updateStats();
+
+
+    showToast(
+        "Document removed"
+    );
+
+}
+
+
+/* ==========================================
+   UPDATE STATISTICS
+   ========================================== */
+
+function updateStats() {
+
+
+    document
+        .getElementById("docCount")
+        .textContent =
+        locker.files.length;
+
+
+    const totalSize =
+        locker.files.reduce(
+
+            (total, file) =>
+
+            total + file.size,
+
+            0
+
+        );
+
+
+    document
+        .getElementById("storage")
+        .textContent =
+        formatSize(totalSize);
+
+
+    document
+        .getElementById("catCount")
+        .textContent =
+
+        new Set(
+
+            locker.files.map(
+                file =>
+                file.category
+            )
+
+        ).size;
+
+}
+
+
+/* ==========================================
+   FILE SIZE
+   ========================================== */
+
+function formatSize(bytes) {
+
+
+    if (bytes < 1024) {
+
+        return bytes + " B";
+
+    }
+
+
+    if (
+        bytes <
+        1024 * 1024
+    ) {
+
+        return (
+
+            bytes / 1024
+
+        ).toFixed(1)
+
+        + " KB";
+
+    }
+
+
+    return (
+
+        bytes /
+        (1024 * 1024)
+
+    ).toFixed(2)
+
+    + " MB";
+
+}
+
+
+/* ==========================================
+   SAVE NOTE
+   ========================================== */
+
+function saveNote() {
+
+
+    locker.note =
+        document
+        .getElementById("notes")
+        .value;
+
+
+    saveLocker();
+
+
+    showToast(
+        "Note saved 📝"
+    );
+
+}
+
+
+/* ==========================================
+   OPEN PROFILE
+   ========================================== */
+
+function openProfile() {
+
+
+    document
+        .getElementById("pName")
+        .value =
+        locker.profile.name;
+
+
+    document
+        .getElementById("pCollege")
+        .value =
+        locker.profile.college;
+
+
+    document
+        .getElementById("pBranch")
+        .value =
+        locker.profile.branch;
+
+
+    document
+        .getElementById("pYear")
+        .value =
+        locker.profile.year;
+
+
+    document
+        .getElementById("pPhone")
+        .value =
+        locker.profile.phone;
+
+
+    document
+        .getElementById("pAddress")
+        .value =
+        locker.profile.address;
+
+
+    document
+        .getElementById("profileModal")
+        .classList
+        .remove("hidden");
+
+}
+
+
+/* ==========================================
+   CLOSE PROFILE
+   ========================================== */
+
+function closeProfile() {
+
+    document
+        .getElementById("profileModal")
+        .classList
+        .add("hidden");
+
+}
+
+
+/* ==========================================
+   SAVE PROFILE
+   ========================================== */
+
+function saveProfile() {
+
+
+    locker.profile = {
+
+        name:
+            document
+            .getElementById("pName")
+            .value
+            .trim(),
+
+        college:
+            document
+            .getElementById("pCollege")
+            .value
+            .trim(),
+
+        branch:
+            document
+            .getElementById("pBranch")
+            .value
+            .trim(),
+
+        year:
+            document
+            .getElementById("pYear")
+            .value,
+
+        phone:
+            document
+            .getElementById("pPhone")
+            .value
+            .trim(),
+
+        address:
+            document
+            .getElementById("pAddress")
+            .value
+            .trim()
+
+    };
+
+
+    saveLocker();
+
+
+    const saved =
+        localStorage.getItem(
+            CRED_KEY
+        );
+
+
+    if (saved) {
+
+        const credentials =
+            JSON.parse(saved);
+
+
+        document
+            .getElementById("welcome")
+            .textContent =
+
+            "Welcome, " +
+
+            (
+                locker.profile.name ||
+                credentials.id
+            ) +
+
+            " 👋";
+
+    }
+
+
+    closeProfile();
+
+
+    showToast(
+        "Information saved"
+    );
+
+}
+
+
+/* ==========================================
+   SAFELY DISPLAY TEXT
+   ========================================== */
+
+function safe(text) {
+
+    return String(text)
+
+        .replace(
+            /[&<>"']/g,
+
+            function(character) {
+
+                return {
+
+                    "&": "&amp;",
+
+                    "<": "&lt;",
+
+                    ">": "&gt;",
+
+                    '"': "&quot;",
+
+                    "'": "&#039;"
+
+                }[character];
+
+            }
+
+        );
+
+}
+
+
+/* ==========================================
+   TOAST MESSAGE
+   ========================================== */
+
+function showToast(message) {
+
+
+    const toast =
+        document
+        .getElementById("toast");
+
+
+    toast.textContent =
+        message;
+
+
+    toast.classList
+        .remove("hidden");
+
+
+    setTimeout(
+
+        function() {
+
+            toast.classList
+                .add("hidden");
+
+        },
+
+        2200
+
+    );
+
+}
+
 </script>
-</div>
+
 </body>
+</html>
